@@ -14,3 +14,32 @@ $$
 - 能解释 Tensor Core 的 MMA 运算与 CUDA Core 的区别。
 - 能推导 Online Softmax，并手写 FlashAttention forward 的分块框架。
 - Python 达到熟练使用 PyTorch/Triton、测试和 benchmark 的水平；C++ 达到能够阅读、修改 CUDA kernel 和简单 PyTorch CUDA Extension 的水平。
+
+
+## 需要学习的资料
+
+https://github.com/Tongkaio/CUDA_Kernel_Samples/tree/master 完全够用了！
+- reduce
+- sgemm
+
+flash attention
+- 
+
+
+## 学习笔记
+
+### Sgemm
+
+优化路径
+
+global memory -> shared memory -> register
+
+简单来说就是将global内加载到shared中，进一步加载到register中，减少从慢的设备中的访问加快读写
+
+读：2mnk
+写：mn
+
+优化后：
+
+读：
+写：

@@ -115,6 +115,13 @@ __global__ void relu_float4(float *x, float* y, int N) {
 ```
 ### reduce
 
+```cpp
+dim3 block_size(BLOCK_SIZE);
+dim3 grid_size(CEIL(N, BLOCK_SIZE));
+reduce_v1<<<grid_size, block_size>>>(d_x, d_y);
+
+__global__ void reduce_v1()
+```
 
 ## Triton 篇
 
