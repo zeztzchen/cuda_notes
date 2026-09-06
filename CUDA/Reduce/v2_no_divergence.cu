@@ -6,29 +6,16 @@
 
 #define THREAD_PER_BLOCK 256
 
-const int N = 32 * 1024 * 1024;
-
-__global__ void reduce_v0(float* d_input, float* d_output) {
+__global__ void reduce_v2(float* d_input, float* d_output) {
+    __shared__ float s_data[THREAD_PER_BLOCK];
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-    for (int i = 1; i < blockDim.x; i *= 2) {
-        if (threadIdx.x % (i * 2) == 0)  {
-            d_input[idx] += d_input[idx + i];
-        }
-        __syncthreads();
-    }
-    if (threadIdx.x == 0) d_output[blockIdx.x] = d_input[idx];
-}
-
-__global__ void reduce_v1(float* d_input, float* d_output) {
-    __shared__ float s_data[blockDim.x];
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    s_data[threadIdx.x] = idx < N ? d_input[idx] : 0;
+    s_data[threadIdx.x] = d_input[idx];
     __syncthreads();
 
-    for (int i = 1; i < blockDim.x; i *= 2) {
-        if (threadIdx.x % (i * 2) == 0)  {
-            s_data[threadIdx.x] += s_data[threadIdx.x + i];
+    for (int i = 1;  i < blockDim.x; i *= 2) {
+        int index = threadIdx.x * (2 * i);
+        if (index < blockDim.x) { // 对于每个warp而言，都进入了一个if语句，没有divergence， 消除了前三次的divergence， 只剩下最后一次的divergence
+            s_data[index] += s_data[index + i];
         }
         __syncthreads();
     }
@@ -36,16 +23,19 @@ __global__ void reduce_v1(float* d_input, float* d_output) {
 }
 
 // __global__ void reduce_v0(float* d_input, float* d_output) {
+//     __shared__ float s_data[THREAD_PER_BLOCK];
 //     float* input_begin = d_input + blockIdx.x * THREAD_PER_BLOCK;
+//     s_data[threadIdx.x] = input_begin[threadIdx.x];
+//     __syncthreads();
 
 //     for (int i = 1; i < THREAD_PER_BLOCK; i *= 2) {
 //         if (threadIdx.x % (i * 2) == 0)  {
-//             input_begin[threadIdx.x] += input_begin[threadIdx.x + i];
+//             s_data[threadIdx.x] += s_data[threadIdx.x + i];
 //         }
 //         __syncthreads();
 //     }
 //     if (threadIdx.x == 0) {
-//         d_output[blockIdx.x] = input_begin[0];
+//         d_output[blockIdx.x] = s_data[0];
 //     }
 // }
 
@@ -86,7 +76,7 @@ int main() {
 
     dim3 Grid(block_num, 1);
     dim3 Block(THREAD_PER_BLOCK, 1);
-    reduce_v0<<<Grid, Block>>>(d_input, d_output);
+    reduce_v2<<<Grid, Block>>>(d_input, d_output);
 
     cudaMemcpy(output, d_output, block_num * sizeof(float), cudaMemcpyDeviceToHost);
 
