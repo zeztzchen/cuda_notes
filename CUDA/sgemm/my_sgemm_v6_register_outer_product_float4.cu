@@ -77,7 +77,7 @@ __global__ void cuda_sgemm(float *A_ptr, float *B_ptr, float *C_ptr, const int M
 
     for (int s = 0; s < K; s += K_NUM_PER_BLOCK)
     {
-        for (int i = 0; i < M_NUM_PER_THREAD; i++)
+        for (int i = 0; i < M_NUM_PER_THREAD; i++) // 这里其实是一样的，这个地方重写了，为了后续优化方便。
         {
             FETCH_FLOAT4(a_shared[ty * M_NUM_PER_THREAD + i][tx * K_NUM_PER_THREAD]) =
                 FETCH_FLOAT4(A_ptr_start[K * (ty * M_NUM_PER_THREAD + i) + tx * K_NUM_PER_THREAD + s]);

@@ -33,13 +33,3 @@ flash attention
 优化路径
 
 global memory -> shared memory -> register
-
-简单来说就是将global内加载到shared中，进一步加载到register中，减少从慢的设备中的访问加快读写
-
-读：2mnk
-写：mn
-
-优化后：
-
-读：
-写：

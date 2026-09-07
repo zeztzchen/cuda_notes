@@ -91,6 +91,7 @@ __global__ void cuda_sgemm(float *A_ptr, float *B_ptr, float *C_ptr, const int M
     const int B_tile_tid_x = tid % B_tile_thread_per_row;
     const int B_tile_tid_y = tid / B_tile_thread_per_row;
 
+    // 搬运到shared memory 0中
     FETCH_FLOAT4(ldg_a_reg[0]) = FETCH_FLOAT4(A_ptr_start[K * A_tile_tid_y + A_tile_tid_x * 4]);
     a_shared[0][A_tile_tid_x * 4][A_tile_tid_y] = ldg_a_reg[0];
     a_shared[0][A_tile_tid_x * 4 + 1][A_tile_tid_y] = ldg_a_reg[1];
@@ -101,6 +102,7 @@ __global__ void cuda_sgemm(float *A_ptr, float *B_ptr, float *C_ptr, const int M
     int write_stage_idx = 1;
     for (int s = BLOCK_SIZE_K; s < K; s += BLOCK_SIZE_K)
     {
+        // 搬运到shared memory 1中
         FETCH_FLOAT4(ldg_a_reg[0]) = FETCH_FLOAT4(A_ptr_start[K * A_tile_tid_y + A_tile_tid_x * 4 + s]);
         a_shared[write_stage_idx][A_tile_tid_x * 4][A_tile_tid_y] = ldg_a_reg[0];
         a_shared[write_stage_idx][A_tile_tid_x * 4 + 1][A_tile_tid_y] = ldg_a_reg[1];
@@ -108,6 +110,7 @@ __global__ void cuda_sgemm(float *A_ptr, float *B_ptr, float *C_ptr, const int M
         a_shared[write_stage_idx][A_tile_tid_x * 4 + 3][A_tile_tid_y] = ldg_a_reg[3];
         FETCH_FLOAT4(b_shared[write_stage_idx][B_tile_tid_y][B_tile_tid_x * 4]) = FETCH_FLOAT4(B_ptr_start[N * (B_tile_tid_y + s) + B_tile_tid_x * 4]);
         write_stage_idx = write_stage_idx ^ 1;
+        // 计算 shared memory 0中的结果
         for (int k = 0; k < BLOCK_SIZE_K; k++)
         {
             FETCH_FLOAT4(reg_a[0]) = FETCH_FLOAT4(a_shared[write_stage_idx][k][ty * THREAD_SIZE_Y]);
@@ -122,6 +125,7 @@ __global__ void cuda_sgemm(float *A_ptr, float *B_ptr, float *C_ptr, const int M
         __syncthreads();
     }
     write_stage_idx = write_stage_idx ^ 1;
+    // 计算 shared memory 1中的结果
     for (int k = 0; k < BLOCK_SIZE_K; k++)
     {
         FETCH_FLOAT4(reg_a[0]) = FETCH_FLOAT4(a_shared[write_stage_idx][k][ty * THREAD_SIZE_Y]);

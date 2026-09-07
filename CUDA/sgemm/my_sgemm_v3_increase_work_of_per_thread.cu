@@ -83,7 +83,7 @@ __global__ void cuda_sgemm(float *A_ptr, float *B_ptr, float *C_ptr, const int M
                 {
                     temp[i][j] += a_shared[ty + i * BLOCK_SIZE][k] * b_shared[k][tx + j * BLOCK_SIZE];
                 }
-            }
+            } 
         }
         __syncthreads();
     }
